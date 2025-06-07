@@ -12,4 +12,4 @@ pip install pygame
 python3 penalty_game_gui.py
 ```
 
-Use the mouse to click one of the five goal sections (links boven, links onder, midden, rechts boven, rechts onder). The graphical version now draws a real goal with a net, a round bal and een eenvoudige keeper die duikt naar de gekozen hoek. Elke goal maakt het lastiger om te scoren (80%, 60%, 40%, dan 20%). De vierde poging is de **gouden bal** en wordt goud getekend. Scoor vier keer achter elkaar om te winnen. Beide versies tonen willekeurige juich- of teleurstellingsteksten en slaan je hoogste score op in `highscore.txt`.
+Use the mouse to click one of the five goal sections (links boven, links onder, midden, rechts boven, rechts onder). De grafische versie tekent nu een echt doel met net, een voetbal met zwart-wit patroon en een keeper met shirt en handschoenen. Elke goal maakt het lastiger om te scoren (80%, 60%, 40%, dan 20%). De vierde poging is de **gouden bal** en wordt goud getekend. Scoor vier keer achter elkaar om te winnen. Beide versies tonen willekeurige juich- of teleurstellingsteksten en slaan je hoogste score op in `highscore.txt`.

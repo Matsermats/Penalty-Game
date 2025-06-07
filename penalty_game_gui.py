@@ -1,4 +1,5 @@
 import random
+import math
 import pygame
 from pathlib import Path
 
@@ -16,8 +17,11 @@ SAVE_MESSAGES = [
 ]
 
 WIDTH, HEIGHT = 600, 400
-GOAL_Y = 50
-GOAL_HEIGHT = 120
+GOAL_Y = 60
+GOAL_HEIGHT = 140
+GOAL_LEFT = WIDTH // 5
+GOAL_WIDTH = WIDTH - GOAL_LEFT * 2
+GOAL_RIGHT = GOAL_LEFT + GOAL_WIDTH
 SECTIONS = 5
 SUCCESS_CHANCES = [0.8, 0.6, 0.4, 0.2]
 
@@ -30,19 +34,19 @@ font = pygame.font.SysFont(None, 36)
 clock = pygame.time.Clock()
 
 # positions for ball and keeper
-ball_start = (WIDTH // 2, HEIGHT - 50)
+ball_start = (WIDTH // 2, HEIGHT - 60)
 ball_pos = list(ball_start)
-keeper_pos = [WIDTH // 2, GOAL_Y + GOAL_HEIGHT - 20]
+keeper_pos = [WIDTH // 2, GOAL_Y + GOAL_HEIGHT - 10]
 GOLD = (255, 215, 0)
-THIRD = WIDTH // 3
+THIRD = GOAL_WIDTH // 3
 HALF = GOAL_HEIGHT // 2
 
 SECTION_RECTS = [
-    pygame.Rect(0, GOAL_Y, THIRD, HALF),
-    pygame.Rect(0, GOAL_Y + HALF, THIRD, HALF),
-    pygame.Rect(THIRD, GOAL_Y, THIRD, GOAL_HEIGHT),
-    pygame.Rect(2 * THIRD, GOAL_Y, THIRD, HALF),
-    pygame.Rect(2 * THIRD, GOAL_Y + HALF, THIRD, HALF),
+    pygame.Rect(GOAL_LEFT, GOAL_Y, THIRD, HALF),
+    pygame.Rect(GOAL_LEFT, GOAL_Y + HALF, THIRD, HALF),
+    pygame.Rect(GOAL_LEFT + THIRD, GOAL_Y, THIRD, GOAL_HEIGHT),
+    pygame.Rect(GOAL_LEFT + 2 * THIRD, GOAL_Y, THIRD, HALF),
+    pygame.Rect(GOAL_LEFT + 2 * THIRD, GOAL_Y + HALF, THIRD, HALF),
 ]
 
 BALL_TARGETS = [
@@ -71,6 +75,7 @@ def run_game(highscore):
     score = 0
     ball_pos[:] = ball_start
     keeper_pos[0] = WIDTH // 2
+    keeper_pos[1] = GOAL_Y + GOAL_HEIGHT - 10
     shooting = False
     ball_target = None
     keeper_target = None
@@ -147,7 +152,7 @@ def run_game(highscore):
                     else:
                         ball_pos[:] = ball_start
                         keeper_pos[0] = WIDTH // 2
-                        keeper_pos[1] = GOAL_Y + GOAL_HEIGHT - 20
+                        keeper_pos[1] = GOAL_Y + GOAL_HEIGHT - 10
                         shooting = False
 
         draw_field()
@@ -167,14 +172,16 @@ def run_game(highscore):
 
 
 def draw_field():
-    screen.fill((0, 128, 0))
+    screen.fill((34, 139, 34))
+    # penalty spot
+    pygame.draw.circle(screen, (255, 255, 255), (WIDTH // 2, HEIGHT - 70), 3)
     # goal frame
-    pygame.draw.rect(screen, (255, 255, 255), (0, GOAL_Y, WIDTH, GOAL_HEIGHT), 5)
-    # simple net
-    for x in range(0, WIDTH, 30):
+    pygame.draw.rect(screen, (255, 255, 255), (GOAL_LEFT, GOAL_Y, GOAL_WIDTH, GOAL_HEIGHT), 5)
+    # net
+    for x in range(GOAL_LEFT, GOAL_RIGHT + 1, 20):
         pygame.draw.line(screen, (200, 200, 200), (x, GOAL_Y), (x, GOAL_Y + GOAL_HEIGHT), 1)
     for y in range(GOAL_Y, GOAL_Y + GOAL_HEIGHT + 1, 20):
-        pygame.draw.line(screen, (200, 200, 200), (0, y), (WIDTH, y), 1)
+        pygame.draw.line(screen, (200, 200, 200), (GOAL_LEFT, y), (GOAL_RIGHT, y), 1)
     # show clickable sections
     for rect in SECTION_RECTS:
         pygame.draw.rect(screen, (255, 255, 255), rect, 1)
@@ -183,26 +190,32 @@ def draw_field():
 def draw_ball(gold=False):
     color = GOLD if gold else (255, 255, 255)
     x, y = int(ball_pos[0]), int(ball_pos[1])
-    pygame.draw.circle(screen, color, (x, y), 10)
-    pygame.draw.circle(screen, (0, 0, 0), (x, y), 10, 1)
-    pygame.draw.line(screen, (0, 0, 0), (x - 5, y), (x + 5, y), 1)
-    pygame.draw.line(screen, (0, 0, 0), (x, y - 5), (x, y + 5), 1)
+    radius = 12
+    pygame.draw.circle(screen, color, (x, y), radius)
+    pygame.draw.circle(screen, (0, 0, 0), (x, y), radius, 2)
+    for angle in range(0, 360, 60):
+        rad = math.radians(angle)
+        end = (x + int(radius * 0.6 * math.cos(rad)), y + int(radius * 0.6 * math.sin(rad)))
+        pygame.draw.line(screen, (0, 0, 0), (x, y), end, 1)
 
 
 def draw_keeper():
     x, y = int(keeper_pos[0]), int(keeper_pos[1])
-    body_color = (0, 0, 255)
-    head_color = (255, 224, 189)
-    # body
-    pygame.draw.line(screen, body_color, (x, y - 20), (x, y), 4)
+    jersey = (0, 0, 220)
+    skin = (255, 224, 189)
+    # torso
+    pygame.draw.rect(screen, jersey, (x - 12, y - 28, 24, 28))
     # arms
-    pygame.draw.line(screen, body_color, (x, y - 15), (x - 10, y - 5), 4)
-    pygame.draw.line(screen, body_color, (x, y - 15), (x + 10, y - 5), 4)
+    pygame.draw.line(screen, jersey, (x - 12, y - 20), (x - 24, y - 10), 5)
+    pygame.draw.line(screen, jersey, (x + 12, y - 20), (x + 24, y - 10), 5)
+    pygame.draw.circle(screen, skin, (x - 24, y - 10), 4)
+    pygame.draw.circle(screen, skin, (x + 24, y - 10), 4)
     # legs
-    pygame.draw.line(screen, body_color, (x, y), (x - 8, y + 20), 4)
-    pygame.draw.line(screen, body_color, (x, y), (x + 8, y + 20), 4)
+    pygame.draw.line(screen, jersey, (x - 4, y), (x - 12, y + 22), 5)
+    pygame.draw.line(screen, jersey, (x + 4, y), (x + 12, y + 22), 5)
     # head
-    pygame.draw.circle(screen, head_color, (x, y - 28), 8)
+    pygame.draw.circle(screen, skin, (x, y - 34), 10)
+    pygame.draw.circle(screen, (0, 0, 0), (x, y - 34), 10, 1)
 
 
 def main():
