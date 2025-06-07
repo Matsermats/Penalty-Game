@@ -1,5 +1,4 @@
 import random
-codex/maak-penalty-spel-met-keeper-en-random-duiken
 from pathlib import Path
 
 GOAL_MESSAGES = [
@@ -100,9 +99,6 @@ def penalty_game():
         again = input('Nog een keer spelen? (j/n): ').strip().lower()
         if again != 'j':
             break
-
-
-main
 
 if __name__ == '__main__':
     penalty_game()
