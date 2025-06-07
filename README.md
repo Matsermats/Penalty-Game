@@ -7,6 +7,16 @@ This repository contains two versions of a simple penalty shootout game. Both ve
 
 Install Pygame and start the GUI with:
 
+codex/update-readme-for-pygame-installation
+
+This repository contains two versions of a simple penalty shootout game.
+
+- **penalty_game.py** – command line version where you type `l`, `m` or `r` to shoot left, middle or right.
+- **penalty_game_gui.py** – Pygame version where you click inside the goal to shoot and watch the keeper dive.
+
+Install the required dependency and run the graphical game with:
+
+main
 ```bash
 python3 -m pip install pygame  # use the pip alias if available
 python3 penalty_game_gui.py
