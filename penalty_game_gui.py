@@ -33,6 +33,11 @@ pygame.display.set_caption("Penalty Game")
 font = pygame.font.SysFont(None, 36)
 clock = pygame.time.Clock()
 
+# animation helpers
+ball_progress = 0.0
+keeper_progress = 0.0
+keeper_angle = 0.0
+
 # positions for ball and keeper
 ball_start = (WIDTH // 2, HEIGHT - 60)
 ball_pos = list(ball_start)
@@ -72,14 +77,22 @@ def save_highscore(score):
 
 
 def run_game(highscore):
+    global ball_progress, keeper_progress, keeper_angle
+
     score = 0
     ball_pos[:] = ball_start
     keeper_pos[0] = WIDTH // 2
     keeper_pos[1] = GOAL_Y + GOAL_HEIGHT - 10
+    ball_progress = 0.0
+    keeper_progress = 0.0
+    keeper_angle = 0.0
     shooting = False
     ball_target = None
     keeper_target = None
     section_chosen = None
+    ball_start_pos = ball_start
+    keeper_start = keeper_pos[:]
+    angle_target = 0
     running = True
 
     while running:
@@ -92,48 +105,38 @@ def run_game(highscore):
                     if rect.collidepoint(x, y):
                         section_chosen = idx
                         ball_target = BALL_TARGETS[idx]
+                        ball_start_pos = tuple(ball_pos)
+                        keeper_start = keeper_pos[:]
                         chance = SUCCESS_CHANCES[min(score, len(SUCCESS_CHANCES) - 1)]
                         if random.random() < chance:
                             choices = [i for i in range(SECTIONS) if i != idx]
                             keeper_target = random.choice(choices)
                         else:
                             keeper_target = idx
+                        angle_target = -40 if keeper_target in (0, 1) else 40 if keeper_target in (3, 4) else 0
+                        ball_progress = 0.0
+                        keeper_progress = 0.0
                         shooting = True
                         break
 
         if shooting:
-            # move ball toward target
-            for i in (0, 1):
-                if ball_pos[i] < ball_target[i]:
-                    ball_pos[i] += 10
-                    if ball_pos[i] > ball_target[i]:
-                        ball_pos[i] = ball_target[i]
-                elif ball_pos[i] > ball_target[i]:
-                    ball_pos[i] -= 10
-                    if ball_pos[i] < ball_target[i]:
-                        ball_pos[i] = ball_target[i]
+            # smooth animation using progress variables
+            ball_progress = min(ball_progress + 0.05, 1.0)
+            keeper_progress = min(keeper_progress + 0.07, 1.0)
 
-            # move keeper toward target
+            t = ball_progress
+            bx = ball_start_pos[0] + (ball_target[0] - ball_start_pos[0]) * t
+            by = ball_start_pos[1] + (ball_target[1] - ball_start_pos[1]) * t
+            arc = -60 * math.sin(math.pi * t)
+            ball_pos[:] = [bx, by + arc]
+
             target_x, target_y = KEEPER_TARGETS[keeper_target]
-            if keeper_pos[0] < target_x:
-                keeper_pos[0] += 15
-                if keeper_pos[0] > target_x:
-                    keeper_pos[0] = target_x
-            elif keeper_pos[0] > target_x:
-                keeper_pos[0] -= 15
-                if keeper_pos[0] < target_x:
-                    keeper_pos[0] = target_x
+            kx = keeper_start[0] + (target_x - keeper_start[0]) * keeper_progress
+            ky = keeper_start[1] + (target_y - keeper_start[1]) * keeper_progress
+            keeper_pos[:] = [kx, ky]
+            keeper_angle = angle_target * keeper_progress
 
-            if keeper_pos[1] > target_y:
-                keeper_pos[1] -= 15
-                if keeper_pos[1] < target_y:
-                    keeper_pos[1] = target_y
-            elif keeper_pos[1] < target_y:
-                keeper_pos[1] += 15
-                if keeper_pos[1] > target_y:
-                    keeper_pos[1] = target_y
-
-            if (ball_pos[0], ball_pos[1]) == ball_target and (keeper_pos[0], keeper_pos[1]) == (target_x, target_y):
+            if ball_progress >= 1.0 and keeper_progress >= 1.0:
                 if keeper_target == section_chosen:
                     msg = random.choice(SAVE_MESSAGES)
                     text = font.render(msg + f" Score: {score}", True, (255, 255, 255))
@@ -153,6 +156,9 @@ def run_game(highscore):
                         ball_pos[:] = ball_start
                         keeper_pos[0] = WIDTH // 2
                         keeper_pos[1] = GOAL_Y + GOAL_HEIGHT - 10
+                        ball_start_pos = ball_start
+                        keeper_start = keeper_pos[:]
+                        keeper_angle = 0
                         shooting = False
 
         draw_field()
@@ -178,9 +184,9 @@ def draw_field():
     # goal frame
     pygame.draw.rect(screen, (255, 255, 255), (GOAL_LEFT, GOAL_Y, GOAL_WIDTH, GOAL_HEIGHT), 5)
     # net
-    for x in range(GOAL_LEFT, GOAL_RIGHT + 1, 20):
+    for x in range(GOAL_LEFT, GOAL_RIGHT + 1, 10):
         pygame.draw.line(screen, (200, 200, 200), (x, GOAL_Y), (x, GOAL_Y + GOAL_HEIGHT), 1)
-    for y in range(GOAL_Y, GOAL_Y + GOAL_HEIGHT + 1, 20):
+    for y in range(GOAL_Y, GOAL_Y + GOAL_HEIGHT + 1, 10):
         pygame.draw.line(screen, (200, 200, 200), (GOAL_LEFT, y), (GOAL_RIGHT, y), 1)
     # show clickable sections
     for rect in SECTION_RECTS:
@@ -197,25 +203,31 @@ def draw_ball(gold=False):
         rad = math.radians(angle)
         end = (x + int(radius * 0.6 * math.cos(rad)), y + int(radius * 0.6 * math.sin(rad)))
         pygame.draw.line(screen, (0, 0, 0), (x, y), end, 1)
+    for angle in range(30, 360, 60):
+        rad = math.radians(angle)
+        outer = (x + int(radius * 0.8 * math.cos(rad)), y + int(radius * 0.8 * math.sin(rad)))
+        inner = (x + int(radius * 0.3 * math.cos(rad)), y + int(radius * 0.3 * math.sin(rad)))
+        pygame.draw.line(screen, (0, 0, 0), outer, inner, 1)
 
 
 def draw_keeper():
-    x, y = int(keeper_pos[0]), int(keeper_pos[1])
+    angle = keeper_angle
+    surf = pygame.Surface((80, 80), pygame.SRCALPHA)
+    x, y = 40, 50
     jersey = (0, 0, 220)
     skin = (255, 224, 189)
-    # torso
-    pygame.draw.rect(screen, jersey, (x - 12, y - 28, 24, 28))
-    # arms
-    pygame.draw.line(screen, jersey, (x - 12, y - 20), (x - 24, y - 10), 5)
-    pygame.draw.line(screen, jersey, (x + 12, y - 20), (x + 24, y - 10), 5)
-    pygame.draw.circle(screen, skin, (x - 24, y - 10), 4)
-    pygame.draw.circle(screen, skin, (x + 24, y - 10), 4)
-    # legs
-    pygame.draw.line(screen, jersey, (x - 4, y), (x - 12, y + 22), 5)
-    pygame.draw.line(screen, jersey, (x + 4, y), (x + 12, y + 22), 5)
-    # head
-    pygame.draw.circle(screen, skin, (x, y - 34), 10)
-    pygame.draw.circle(screen, (0, 0, 0), (x, y - 34), 10, 1)
+    pygame.draw.rect(surf, jersey, (x - 12, y - 28, 24, 28))
+    pygame.draw.line(surf, jersey, (x - 12, y - 20), (x - 24, y - 10), 5)
+    pygame.draw.line(surf, jersey, (x + 12, y - 20), (x + 24, y - 10), 5)
+    pygame.draw.circle(surf, skin, (x - 24, y - 10), 4)
+    pygame.draw.circle(surf, skin, (x + 24, y - 10), 4)
+    pygame.draw.line(surf, jersey, (x - 4, y), (x - 12, y + 22), 5)
+    pygame.draw.line(surf, jersey, (x + 4, y), (x + 12, y + 22), 5)
+    pygame.draw.circle(surf, skin, (x, y - 34), 10)
+    pygame.draw.circle(surf, (0, 0, 0), (x, y - 34), 10, 1)
+    rotated = pygame.transform.rotate(surf, angle)
+    rect = rotated.get_rect(center=(int(keeper_pos[0]), int(keeper_pos[1])))
+    screen.blit(rotated, rect)
 
 
 def main():
